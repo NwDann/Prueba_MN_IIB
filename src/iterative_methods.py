@@ -27,7 +27,7 @@ import numpy as np
 
 # ####################################################################
 def gauss_jacobi(
-    *, A: np.array, b: np.array, x0: np.array, tol: float, max_iter: int
+    A: np.array, b: np.array, x0: np.array, tol: float, max_iter: int
 ) -> np.array:
     """Resuelve el sistema de ecuaciones lineales Ax = b mediante el método de Jacobi.
 
@@ -58,27 +58,28 @@ def gauss_jacobi(
     assert x0.shape[0] == A.shape[0], "El vector x0 debe ser de tamaño n."
 
     # --- Algoritmo ---
-    n = A.shape[0]
-    x = x0.copy()
-    logging.info(f"i= {0} x: {x.T}")
-    for k in range(1, max_iter):
-        x_new = np.zeros((n, 1))  # prealloc
+    n = len(A)
+    x = np.array(x0, dtype=float)
+    iteraciones = [x.copy()]
+
+    for k in range(max_iter):
+        x_new = np.zeros_like(x)
         for i in range(n):
-            suma = sum([A[i, j] * x[j] for j in range(n) if j != i])
-            x_new[i] = (b[i] - suma) / A[i, i]
-
-        if np.linalg.norm(x_new - x) < tol:
-            return x_new
-
-        x = x_new.copy()
+            suma = sum(A[i][j] * x[j] for j in range(n) if j != i)
+            x_new[i] = (b[i] - suma) / A[i][i]
+        iteraciones.append(x_new.copy())
+        if np.linalg.norm(x_new - x, ord=np.inf) < tol:
+            break
+        x = x_new
+        
         logging.info(f"i= {k} x: {x.T}")
 
-    return x
+    return x, iteraciones
 
 
 # ####################################################################
 def gauss_seidel(
-    *, A: np.array, b: np.array, x0: np.array, tol: float, max_iter: int
+    A: np.array, b: np.array, x0: np.array, tol: float, max_iter: int
 ) -> np.array:
     """Resuelve el sistema de ecuaciones lineales Ax = b mediante el método de Gauss-Seidel.
 
@@ -108,22 +109,21 @@ def gauss_seidel(
     assert x0.shape[0] == A.shape[0], "El vector x0 debe ser de tamaño n."
 
     # --- Algoritmo ---
-    n = A.shape[0]
-    x = x0.copy()
+    n = len(A)
+    x = np.array(x0, dtype=float)
+    iteraciones = [x.copy()]
 
-    logging.info(f"i= {0} x: {x.T}")
-    for k in range(1, max_iter):
-        x_new = np.zeros((n, 1))  # prealloc
+    for k in range(max_iter):
+        x_new = np.zeros_like(x)
         for i in range(n):
-            suma = sum([A[i, j] * x_new[j] for j in range(i) if j != i]) + sum(
-                [A[i, j] * x[j] for j in range(i, n) if j != i]
-            )
-            x_new[i] = (b[i] - suma) / A[i, i]
-
-        if np.linalg.norm(x_new - x) < tol:
-            return x_new
-
-        x = x_new.copy()
+            suma1 = sum(A[i][j] * x_new[j] for j in range(i))
+            suma2 = sum(A[i][j] * x[j] for j in range(i+1, n))
+            x_new[i] = (b[i] - (suma1 + suma2)) / A[i][i]
+        iteraciones.append(x_new.copy())
+        if np.linalg.norm(x_new - x, ord=np.inf) < tol:
+            break
+        x = x_new
+        
         logging.info(f"i= {k} x: {x.T}")
 
-    return x
+    return x, iteraciones
